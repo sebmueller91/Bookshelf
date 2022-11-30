@@ -55,7 +55,7 @@ fun QueryScreen(
 
     Column() {
         SearchBar(viewModel)
-        if (!viewModel.query.isEmpty()) {
+        if (viewModel.searchStarted) {
             when (bookshelfUiState) {
                 is BookshelfUiState.Loading -> LoadingScreen(modifier)
                 is BookshelfUiState.Success -> ScrollableBooksList(bookshelfUiState.books, modifier)
@@ -166,15 +166,15 @@ fun BookCard(
             )
         ) {
             AsyncImage(
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier.fillMaxWidth().aspectRatio(0.67f),
                 model = ImageRequest.Builder(context = LocalContext.current)
                     .data(book.getThumbnailAsHttps())
                     .crossfade(true)
                     .build(),
-                contentDescription = null, // TODO: Add name of book
-                contentScale = ContentScale.FillWidth,
+                contentDescription = book?.volumeInfo?.title,
+                contentScale = ContentScale.Crop,
                 error = painterResource(id = R.drawable.ic_broken_image),
-                placeholder = painterResource(id = R.drawable.loading_img)
+                placeholder = painterResource(id = R.drawable.loading_img),
             )
             Row() {
                 FavoritesButton(
@@ -201,10 +201,14 @@ fun BookCard(
                         propertyName = stringResource(R.string.Title),
                         propertyValue = book?.volumeInfo?.title
                     )
-                    TextLine("Subtitle", propertyValue = book?.volumeInfo?.subtitle)
+                    if (book?.volumeInfo?.subtitle?.isNullOrEmpty() == false) {
+                        TextLine("Subtitle", propertyValue = book?.volumeInfo?.subtitle)
+                    }
                     TextLine("Authors", propertyValue = book.getFirstThreeAuthors())
-                    TextLine("Price", propertyValue = book.getPrice())
-                    TextLine("Description", propertyValue = book.description)
+                    if (!book.getPrice().isEmpty()) {
+                        TextLine("Price", propertyValue = book.getPrice())
+                    }
+                    //TextLine("Description", propertyValue = book.description)
                 }
             }
         }

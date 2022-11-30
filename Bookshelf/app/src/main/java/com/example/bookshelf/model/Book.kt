@@ -20,6 +20,7 @@ data class Book(
 
     fun getFirstThreeAuthors(): String {
         var authors = "${getAuthorAtIndexOrEmpty(0)}, ${getAuthorAtIndexOrEmpty(1)}, ${getAuthorAtIndexOrEmpty(2)}"
+        authors = authors.trimEnd(' ', ',')
         return authors
     }
 
