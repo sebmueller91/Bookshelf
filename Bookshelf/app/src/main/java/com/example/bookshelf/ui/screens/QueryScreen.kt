@@ -1,32 +1,28 @@
 package com.example.bookshelf.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.BottomEnd
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterVertically
-import androidx.compose.ui.Alignment.Companion.Start
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -46,7 +42,7 @@ import com.example.bookshelf.ui.theme.BookshelfTheme
 
 @Composable
 fun QueryScreen(
-    viewModel: QueryViewModel,
+    viewModel: BookshelfViewModel,
     bookshelfUiState: BookshelfUiState,
     retryAction: () -> Unit,
     modifier: Modifier = Modifier
@@ -58,7 +54,11 @@ fun QueryScreen(
         if (viewModel.searchStarted) {
             when (bookshelfUiState) {
                 is BookshelfUiState.Loading -> LoadingScreen(modifier)
-                is BookshelfUiState.Success -> ScrollableBooksList(bookshelfUiState.books, modifier)
+                is BookshelfUiState.Success -> ScrollableBooksList(
+                    bookshelfUiState.books,
+                    viewModel,
+                    modifier
+                )
                 else -> ErrorScreen(retryAction, modifier)
             }
         }
@@ -67,13 +67,11 @@ fun QueryScreen(
 
 @Composable
 fun SearchBar(
-    viewModel: QueryViewModel,
+    viewModel: BookshelfViewModel,
     modifier: Modifier = Modifier
 ) {
-    var query by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val lightBlue = Color(0xffd8e6ff)
-    val blue = Color(0xff76a9ff) // TODO: Move out
 
     Column(
         modifier = modifier
@@ -127,6 +125,7 @@ fun SearchBar(
 @Composable
 fun ScrollableBooksList(
     books: List<Book>,
+    viewModel: BookshelfViewModel,
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
@@ -138,7 +137,7 @@ fun ScrollableBooksList(
             .fillMaxWidth(),
     ) {
         items(books) { book ->
-            BookCard(book = book)
+            BookCard(book = book, viewModel = viewModel)
         }
     }
 }
@@ -146,10 +145,12 @@ fun ScrollableBooksList(
 @Composable
 fun BookCard(
     book: Book,
+    viewModel: BookshelfViewModel,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     var favorite by remember { mutableStateOf(false) }
+    favorite = viewModel.isBookFavorite(book)
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -166,7 +167,9 @@ fun BookCard(
             )
         ) {
             AsyncImage(
-                modifier = modifier.fillMaxWidth().aspectRatio(0.67f),
+                modifier = modifier
+                    .fillMaxWidth()
+                    .aspectRatio(0.67f),
                 model = ImageRequest.Builder(context = LocalContext.current)
                     .data(book.getThumbnailAsHttps())
                     .crossfade(true)
@@ -179,7 +182,14 @@ fun BookCard(
             Row() {
                 FavoritesButton(
                     favorite = favorite,
-                    onClick = { favorite = !favorite },
+                    onClick = {
+                        if (favorite) {
+                            viewModel.removeFavoriteBook(book)
+                        } else {
+                            viewModel.addFavoriteBook(book)
+                        }
+                        favorite = !favorite
+                    },
                     modifier = modifier.align(
                         CenterVertically
                     )
@@ -194,9 +204,11 @@ fun BookCard(
             }
 
             if (expanded) {
-                Column(modifier = modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)) {
+                Column(
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
                     TextLine(
                         propertyName = stringResource(R.string.Title),
                         propertyValue = book?.volumeInfo?.title
@@ -234,15 +246,6 @@ fun TextLine(propertyName: String, propertyValue: String?, modifier: Modifier = 
     }
 }
 
-@Preview
-@Composable
-fun TextLinePreview() {
-    BookshelfTheme(darkTheme = false) {
-        TextLine("Title", "Cicero")
-    }
-}
-
-
 @Composable
 fun FavoritesButton(
     favorite: Boolean,
@@ -267,7 +270,6 @@ fun ExpandButton(
     IconButton(onClick = onClick) {
         Icon(
             imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-
             tint = Color.DarkGray,
             contentDescription = stringResource(R.string.ExpandButtonContentDescription)
         )
@@ -299,5 +301,13 @@ fun ErrorScreen(retryAction: () -> Unit, modifier: Modifier = Modifier) {
         Button(onClick = retryAction) {
             Text(stringResource(R.string.retry))
         }
+    }
+}
+
+@Preview
+@Composable
+fun TextLinePreview() {
+    BookshelfTheme(darkTheme = false) {
+        TextLine("Title", "Cicero")
     }
 }

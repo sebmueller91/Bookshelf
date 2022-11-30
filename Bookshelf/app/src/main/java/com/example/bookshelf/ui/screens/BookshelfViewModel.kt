@@ -1,5 +1,7 @@
 package com.example.bookshelf.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -21,10 +23,9 @@ sealed interface BookshelfUiState {
     object Loading : BookshelfUiState
 }
 
-class QueryViewModel(
+class BookshelfViewModel(
     private val booksRepository: BooksRepository
-) : ViewModel()
-{
+) : ViewModel() {
     var bookshelfUiState: BookshelfUiState by mutableStateOf(BookshelfUiState.Loading)
         private set
 
@@ -34,8 +35,11 @@ class QueryViewModel(
     var searchStarted: Boolean by mutableStateOf(false)
         private set
 
+    var favoriteBooks: MutableList<Book> by mutableStateOf(mutableListOf<Book>())
+        private set
+
     init {
-        // TODO: ?
+
     }
 
     fun updateQuery(newQuery: String) {
@@ -56,12 +60,28 @@ class QueryViewModel(
         }
     }
 
+    fun addFavoriteBook(book: Book) {
+        if (!isBookFavorite(book)) {
+            favoriteBooks.add(book)
+        }
+    }
+
+    fun isBookFavorite(book: Book) : Boolean {
+        return !favoriteBooks.filter { x -> x.id == book.id }.isEmpty();
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    fun removeFavoriteBook(book: Book) {
+        favoriteBooks.removeIf { it.id == book.id }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BookshelfApplication)
+                val application =
+                    (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BookshelfApplication)
                 val booksRepository = application.container.booksRepository
-                QueryViewModel(booksRepository = booksRepository)
+                BookshelfViewModel(booksRepository = booksRepository)
             }
         }
     }
