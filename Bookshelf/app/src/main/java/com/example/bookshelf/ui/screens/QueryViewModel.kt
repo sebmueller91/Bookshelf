@@ -28,11 +28,18 @@ class QueryViewModel(
     var bookshelfUiState: BookshelfUiState by mutableStateOf(BookshelfUiState.Loading)
         private set
 
+    var query: String by mutableStateOf("")
+        private set
+
     init {
         // TODO: ?
     }
 
-    fun getBooksForQuery(query: String) {
+    fun updateQuery(newQuery: String) {
+        query = newQuery
+    }
+
+    fun getBooksForQuery() {
         viewModelScope.launch {
             bookshelfUiState = BookshelfUiState.Loading
             bookshelfUiState = try {

@@ -1,32 +1,76 @@
 package com.example.bookshelf.ui.screens
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.BottomEnd
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
+import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.Alignment.Companion.Start
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.bookshelf.R
-
+import com.example.bookshelf.model.Book
+import com.example.bookshelf.ui.theme.BookshelfTheme
 
 @Composable
-fun QueryScreen(modifier: Modifier = Modifier) {
-    var text by remember { mutableStateOf("") }
+fun QueryScreen(
+    viewModel: QueryViewModel,
+    bookshelfUiState: BookshelfUiState,
+    retryAction: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+
+    Column() {
+        SearchBar(viewModel)
+        if (!viewModel.query.isEmpty()) {
+            when (bookshelfUiState) {
+                is BookshelfUiState.Loading -> LoadingScreen(modifier)
+                is BookshelfUiState.Success -> ScrollableBooksList(bookshelfUiState.books, modifier)
+                else -> ErrorScreen(retryAction, modifier)
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchBar(
+    viewModel: QueryViewModel,
+    modifier: Modifier = Modifier
+) {
+    var query by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val lightBlue = Color(0xffd8e6ff)
     val blue = Color(0xff76a9ff) // TODO: Move out
@@ -38,15 +82,15 @@ fun QueryScreen(modifier: Modifier = Modifier) {
         horizontalAlignment = CenterHorizontally
     ) {
         Text(
-            stringResource(R.string.SearchBookLibrary),
+            text = stringResource(R.string.SearchBookLibrary),
             modifier = modifier.align(CenterHorizontally),
             fontSize = 20.sp,
             style = MaterialTheme.typography.h6
         )
         TextField(
-            value = text,
+            value = viewModel.query,
             onValueChange = { x: String ->
-                text = x
+                viewModel.updateQuery(x)
             },
             singleLine = true,
             shape = RoundedCornerShape(16.dp),
@@ -57,7 +101,10 @@ fun QueryScreen(modifier: Modifier = Modifier) {
                 imeAction = ImeAction.Search
             ),
             keyboardActions = KeyboardActions(
-                onSearch = { focusManager.clearFocus() }),
+                onSearch = {
+                    viewModel.getBooksForQuery()
+                    focusManager.clearFocus()
+                }),
             leadingIcon = {
                 Icon(
                     Icons.Default.Search,
@@ -74,5 +121,179 @@ fun QueryScreen(modifier: Modifier = Modifier) {
                 unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
             ),
         )
+    }
+}
+
+@Composable
+fun ScrollableBooksList(
+    books: List<Book>,
+    modifier: Modifier = Modifier
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+            .padding(8.dp)
+            .fillMaxWidth(),
+    ) {
+        items(books) { book ->
+            BookCard(book = book)
+        }
+    }
+}
+
+@Composable
+fun BookCard(
+    book: Book,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var favorite by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        elevation = 8.dp,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier.animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        ) {
+            AsyncImage(
+                modifier = modifier.fillMaxWidth(),
+                model = ImageRequest.Builder(context = LocalContext.current)
+                    .data(book.getThumbnailAsHttps())
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null, // TODO: Add name of book
+                contentScale = ContentScale.FillWidth,
+                error = painterResource(id = R.drawable.ic_broken_image),
+                placeholder = painterResource(id = R.drawable.loading_img)
+            )
+            Row() {
+                FavoritesButton(
+                    favorite = favorite,
+                    onClick = { favorite = !favorite },
+                    modifier = modifier.align(
+                        CenterVertically
+                    )
+                )
+                ExpandButton(
+                    expanded = expanded,
+                    onClick = { expanded = !expanded },
+                    modifier = modifier.align(
+                        CenterVertically
+                    )
+                )
+            }
+
+            if (expanded) {
+                Column(modifier = modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)) {
+                    TextLine(
+                        propertyName = stringResource(R.string.Title),
+                        propertyValue = book?.volumeInfo?.title
+                    )
+                    TextLine("Subtitle", propertyValue = book?.volumeInfo?.subtitle)
+                    TextLine("Authors", propertyValue = book.getFirstThreeAuthors())
+                    TextLine("Price", propertyValue = book.getPrice())
+                    TextLine("Description", propertyValue = book.description)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TextLine(propertyName: String, propertyValue: String?, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Text(
+            text = "${propertyName}: ",
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.body2
+        )
+        Text(
+            text = "${propertyValue ?: stringResource(R.string.Unknown)}",
+            style = MaterialTheme.typography.body2
+        )
+    }
+}
+
+@Preview
+@Composable
+fun TextLinePreview() {
+    BookshelfTheme(darkTheme = false) {
+        TextLine("Title", "Cicero")
+    }
+}
+
+
+@Composable
+fun FavoritesButton(
+    favorite: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = if (favorite) Icons.Filled.Favorite else Icons.Filled.Favorite,
+            tint = if (favorite) Color.Red else Color.LightGray,
+            contentDescription = stringResource(R.string.ExpandButtonContentDescription)
+        )
+    }
+}
+
+@Composable
+fun ExpandButton(
+    expanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+
+            tint = Color.DarkGray,
+            contentDescription = stringResource(R.string.ExpandButtonContentDescription)
+        )
+    }
+}
+
+@Composable
+fun LoadingScreen(modifier: Modifier = Modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.fillMaxSize()
+    ) {
+        Image(
+            modifier = Modifier.size(200.dp),
+            painter = painterResource(R.drawable.loading_img),
+            contentDescription = stringResource(R.string.loading)
+        )
+    }
+}
+
+@Composable
+fun ErrorScreen(retryAction: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(stringResource(R.string.loading_failed))
+        Button(onClick = retryAction) {
+            Text(stringResource(R.string.retry))
+        }
     }
 }
