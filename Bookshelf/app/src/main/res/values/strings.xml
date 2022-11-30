@@ -22,5 +22,10 @@
     <string name="SearchBookLibrary">Search Book Library</string>
     <string name="ExpandButtonContentDescription">Show information about book.</string>
     <string name="Unknown">Unknown</string>
+    <string name="back_button">Back</string>
     <string name="Title">Title</string>
+    <string name="QueryScreenName">Query</string>
+    <string name="FavoritesScreenName">Favorites</string>
+    <string name="SearchOnlineBookLibraryButtonText">Serach online book library</string>
+    <string name="ShowFavoriteListButtonText">Show your favorites library</string>
 </resources>
