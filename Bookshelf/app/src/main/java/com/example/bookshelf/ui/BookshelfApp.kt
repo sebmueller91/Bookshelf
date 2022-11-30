@@ -90,14 +90,16 @@ fun BookshelfApp(
             composable(route = BookshelfScreen.Query.name) {
                 QueryScreen(
                     viewModel = viewModel,
-                    bookshelfUiState = viewModel.bookshelfUiState,
+                    bookshelfUiState = viewModel.queryfUiState,
                     retryAction = viewModel::getBooksForQuery
                 )
             }
 
             composable(route = BookshelfScreen.Favorites.name) {
                 FavoritesScreen(
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    bookshelfUiState = viewModel.favoritesfUiState,
+                    retryAction = {}
                 )
             }
         }

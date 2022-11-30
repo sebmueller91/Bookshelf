@@ -28,4 +28,5 @@
     <string name="FavoritesScreenName">Favorites</string>
     <string name="SearchOnlineBookLibraryButtonText">Serach online book library</string>
     <string name="ShowFavoriteListButtonText">Show your favorites library</string>
+    <string name="NoFavoriteBooksText">You don\'t have any favorite books yet.</string>
 </resources>
