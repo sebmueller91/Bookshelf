@@ -26,7 +26,10 @@ sealed interface BookshelfUiState {
 class BookshelfViewModel(
     private val booksRepository: BooksRepository
 ) : ViewModel() {
-    var bookshelfUiState: BookshelfUiState by mutableStateOf(BookshelfUiState.Loading)
+    var queryfUiState: BookshelfUiState by mutableStateOf(BookshelfUiState.Loading)
+        private set
+
+    var favoritesfUiState: BookshelfUiState by mutableStateOf(BookshelfUiState.Loading)
         private set
 
     var query: String by mutableStateOf("")
@@ -49,8 +52,8 @@ class BookshelfViewModel(
     fun getBooksForQuery() {
         searchStarted = true
         viewModelScope.launch {
-            bookshelfUiState = BookshelfUiState.Loading
-            bookshelfUiState = try {
+            queryfUiState = BookshelfUiState.Loading
+            queryfUiState = try {
                 BookshelfUiState.Success(booksRepository.getBooks(query))
             } catch (e: IOException) {
                 BookshelfUiState.Error
@@ -63,16 +66,25 @@ class BookshelfViewModel(
     fun addFavoriteBook(book: Book) {
         if (!isBookFavorite(book)) {
             favoriteBooks.add(book)
+            favoritesUpdated()
         }
     }
 
-    fun isBookFavorite(book: Book) : Boolean {
+    fun isBookFavorite(book: Book): Boolean {
         return !favoriteBooks.filter { x -> x.id == book.id }.isEmpty();
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
     fun removeFavoriteBook(book: Book) {
         favoriteBooks.removeIf { it.id == book.id }
+        favoritesUpdated()
+    }
+
+    private fun favoritesUpdated() {
+        viewModelScope.launch {
+            favoritesfUiState = BookshelfUiState.Loading
+            favoritesfUiState = BookshelfUiState.Success(favoriteBooks)
+
+        }
     }
 
     companion object {
