@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookshelf.ui.screens.QueryScreen
 import com.example.bookshelf.ui.screens.QueryViewModel
@@ -25,7 +24,9 @@ fun BookshelfApp(modifier: Modifier = Modifier) {
             val queryViewModel: QueryViewModel =
                 viewModel(factory = QueryViewModel.Factory)
             QueryScreen(
-               // TODO
+                viewModel = queryViewModel,
+                bookshelfUiState = queryViewModel.bookshelfUiState,
+                retryAction = queryViewModel::getBooksForQuery
             )
         }
     }
