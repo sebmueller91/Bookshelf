@@ -31,6 +31,9 @@ class QueryViewModel(
     var query: String by mutableStateOf("")
         private set
 
+    var searchStarted: Boolean by mutableStateOf(false)
+        private set
+
     init {
         // TODO: ?
     }
@@ -40,6 +43,7 @@ class QueryViewModel(
     }
 
     fun getBooksForQuery() {
+        searchStarted = true
         viewModelScope.launch {
             bookshelfUiState = BookshelfUiState.Loading
             bookshelfUiState = try {
